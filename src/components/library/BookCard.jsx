@@ -1,11 +1,20 @@
 import { Link } from "react-router-dom";
 import { BookOpen, ArrowRight } from "lucide-react";
 
-const formatDate = (value) => new Intl.DateTimeFormat('en', {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-}).format(new Date(value));
+const formatDate = (value) => {
+  if (!value) return '';
+  try {
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return '';
+    return new Intl.DateTimeFormat('en', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(d);
+  } catch {
+    return '';
+  }
+};
 
 export default function BookCard({ book, index }) {
   return (
@@ -29,7 +38,7 @@ export default function BookCard({ book, index }) {
           {book.one_line_summary && (
             <p className="text-xs text-muted-foreground/70 mt-1 line-clamp-2">{book.one_line_summary}</p>
           )}
-          <p className="text-xs text-muted-foreground/50 mt-2">{formatDate(book.created_date)}</p>
+          <p className="text-xs text-muted-foreground/50 mt-2">{formatDate(book.created_at || book.created_date)}</p>
         </div>
         <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors mt-1 flex-shrink-0" />
       </Link>

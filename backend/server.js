@@ -586,8 +586,13 @@ app.delete('/api/summaries/:id', (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => {
-  console.log(`AI Book Summarizer backend listening on port ${PORT}`);
-});
+if (require.main === module) {
+  const PORT = process.env.PORT || 5001;
+  app.listen(PORT, () => {
+    console.log(`AI Book Summarizer backend listening on port ${PORT}`);
+  });
+}
+
+module.exports = app;
+
 

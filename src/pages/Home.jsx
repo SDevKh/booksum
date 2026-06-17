@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BookSearchHero from '@/components/home/BookSearchHero';
 import LoadingState from '@/components/home/LoadingState';
-import { setCurrentSummary } from '@/utils/library';
+import { setCurrentSummary, saveDbSummary } from '@/utils/library';
 import { baseClient } from '@/api/baseClient';
 import { AlertCircle } from 'lucide-react';
 
@@ -51,9 +51,9 @@ export default function Home() {
         }
       };
 
-      setCurrentSummary(summaryWithId);
+      const savedSummary = await saveDbSummary(summaryWithId);
       setIsLoading(false);
-      navigate(`/summary/${summaryId}`);
+      navigate(`/summary/${savedSummary.id}`);
     } catch (err) {
       console.error('Error generating summary:', err);
       setError(err.message || 'Failed to generate summary. Please try again.');
