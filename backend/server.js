@@ -386,11 +386,11 @@ function generateFallbackSummary(title, author, text, day = 1, totalDays = 1) {
   };
 }
 
-app.get('/summarize', (req, res) => {
+app.get('/api/summarize', (req, res) => {
   res.json({ message: 'Please POST JSON { "text": "..." } or { "title": "..." } to this endpoint for summarization.' });
 });
 
-app.post('/summarize', async (req, res) => {
+app.post('/api/summarize', async (req, res) => {
   const { text, title, author, day, totalDays } = req.body;
   if (!text && !title) {
     return res.status(400).json({ error: 'Missing text or title' });

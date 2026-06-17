@@ -73,7 +73,7 @@ export default function SummaryDetail() {
         payload.totalPages = summary.totalPages;
       }
 
-      const apiResult = await baseClient.post('/summarize', payload);
+      const apiResult = await baseClient.post('/api/summarize', payload);
 
       const updatedSummary = {
         ...summary,

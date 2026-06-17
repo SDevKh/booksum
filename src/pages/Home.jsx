@@ -17,7 +17,7 @@ export default function Home() {
     try {
       const { text, title, author, day, totalDays, allPages, totalPages } = payload;
       
-      const apiResult = await baseClient.post('/summarize', {
+      const apiResult = await baseClient.post('/api/summarize', {
         text,
         title,
         author,
