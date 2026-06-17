@@ -43,6 +43,15 @@ export default function Navbar() {
               <span className="hidden sm:inline">My Library</span>
             </Link>
 
+            <a
+              href="https://digitalheroesco.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+            >
+              Built for Digital Heroes
+            </a>
+
             {/* User Profile and Logout */}
             {user && (
               <div className="flex items-center gap-2.5 border-l border-border/40 pl-2.5 ml-1">
