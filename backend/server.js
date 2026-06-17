@@ -454,6 +454,12 @@ Focus specifically on the content that corresponds to Day ${currentDay} of the p
     console.log(`Calling OpenAI API with model: gpt-4o-mini (Day ${currentDay}/${numDays})`);
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    console.warn(`API request to ${invokeUrl} timed out after 8 seconds. Aborting.`);
+    controller.abort();
+  }, 8000);
+
   try {
     const response = await fetch(invokeUrl, {
       method: 'POST',
@@ -462,7 +468,10 @@ Focus specifically on the content that corresponds to Day ${currentDay} of the p
         Authorization: authHeader,
       },
       body: JSON.stringify(bodyPayload),
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     const data = await response.json();
     if (data.error) {
@@ -486,6 +495,7 @@ Focus specifically on the content that corresponds to Day ${currentDay} of the p
     }
     res.json(result);
   } catch (err) {
+    clearTimeout(timeoutId);
     console.error('API call failed:', err.message);
     console.log('Falling back to local summary generator.');
     const fallbackResult = generateFallbackSummary(title, author, text, currentDay, numDays);
