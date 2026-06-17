@@ -1,17 +1,41 @@
 const fs = require('fs');
 const path = require('path');
 
-const DATA_DIR = path.join(__dirname, 'data');
-const DB_FILE = path.join(DATA_DIR, 'db.json');
+const isVercel = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
+// Use /tmp/db.json on Vercel to allow write operations, fallback to local path otherwise
+const DB_FILE = isVercel ? '/tmp/db.json' : path.join(__dirname, 'data', 'db.json');
+const DATA_DIR = isVercel ? '/tmp' : path.join(__dirname, 'data');
 
 // Ensure database directory and file exist
 function initializeDb() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  try {
+    if (!isVercel && !fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(DB_FILE)) {
+      fs.writeFileSync(DB_FILE, JSON.stringify({ users: [], summaries: [] }, null, 2), 'utf8');
+    }
+  } catch (err) {
+    console.error('Database initialization failed:', err);
+    // If it's a read-only filesystem error, try using /tmp as fallback
+    if (!isVercel && err.code === 'EROFS') {
+      console.warn('Falling back to /tmp/db.json due to Read-Only filesystem.');
+      global.DB_FILE_PATH = '/tmp/db.json';
+      try {
+        if (!fs.existsSync('/tmp/db.json')) {
+          fs.writeFileSync('/tmp/db.json', JSON.stringify({ users: [], summaries: [] }, null, 2), 'utf8');
+        }
+      } catch (innerErr) {
+        console.error('Failed to initialize fallback database in /tmp:', innerErr);
+      }
+    }
   }
-  if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify({ users: [], summaries: [] }, null, 2), 'utf8');
-  }
+}
+
+// Helper to get active db file path (resolving fallback dynamically if needed)
+function getDbFile() {
+  return global.DB_FILE_PATH || DB_FILE;
 }
 
 initializeDb();
@@ -19,7 +43,8 @@ initializeDb();
 function readDb() {
   try {
     initializeDb();
-    const data = fs.readFileSync(DB_FILE, 'utf8');
+    const dbPath = getDbFile();
+    const data = fs.readFileSync(dbPath, 'utf8');
     return JSON.parse(data);
   } catch (error) {
     console.error('Error reading database file, using fallback empty structures:', error);
@@ -30,7 +55,8 @@ function readDb() {
 function writeDb(data) {
   try {
     initializeDb();
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+    const dbPath = getDbFile();
+    fs.writeFileSync(dbPath, JSON.stringify(data, null, 2), 'utf8');
   } catch (error) {
     console.error('Error writing to database file:', error);
   }

@@ -12,8 +12,7 @@ const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
 const NVIDIA_MODEL = process.env.NVIDIA_MODEL || 'minimaxai/minimax-m3';
 
 if (!OPENAI_API_KEY && !NVIDIA_API_KEY) {
-  console.error('Missing API keys in environment. Please set OPENAI_API_KEY or NVIDIA_API_KEY in .env file.');
-  process.exit(1);
+  console.warn('Warning: Missing API keys in environment. Please set OPENAI_API_KEY or NVIDIA_API_KEY. The application will run in fallback mock mode.');
 }
 
 const SYSTEM_PROMPT = `You are an expert book summarizer. Given a book title or a block of text, produce a comprehensive, deep, and story-driven summary.
