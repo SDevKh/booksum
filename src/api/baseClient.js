@@ -1,7 +1,9 @@
 /**
  * baseClient.js - Simple REST client wrapping native fetch
  */
-const BASE_URL = 'http://localhost:5001';
+const BASE_URL = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:5001'
+  : '/_/backend';
 
 export const baseClient = {
   async get(endpoint) {
