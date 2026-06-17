@@ -8,7 +8,7 @@
       "root": "backend",
       "routePrefix": "/_/backend",
       "entrypoint": "server.js",
-      "runtime": "nodejs20"
+      "builder": "@vercel/node"
     }
   }
 }
