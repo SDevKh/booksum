@@ -453,12 +453,12 @@ Focus specifically on the content that corresponds to Day ${currentDay} of the p
     };
     console.log(`Calling OpenAI API with model: gpt-4o-mini (Day ${currentDay}/${numDays})`);
   }
-
+  const apiTimeout = parseInt(process.env.API_TIMEOUT, 10) || 120000;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
-    console.warn(`API request to ${invokeUrl} timed out after 8 seconds. Aborting.`);
+    console.warn(`API request to ${invokeUrl} timed out after ${apiTimeout / 1000} seconds. Aborting.`);
     controller.abort();
-  }, 8000);
+  }, apiTimeout);
 
   try {
     const response = await fetch(invokeUrl, {
