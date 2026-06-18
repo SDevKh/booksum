@@ -2,10 +2,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import SummaryActions from '@/components/summary/SummaryActions';
-import SummaryOverview from '@/components/summary/SummaryOverview';
-import KeyTakeaways from '@/components/summary/KeyTakeaways';
-import BestStories from '@/components/summary/BestStories';
-import ActionableInsights from '@/components/summary/ActionableInsights';
+import MarkdownSummary from '@/components/summary/MarkdownSummary';
 import { getDbSummary, saveDbSummary, deleteDbSummary, setCurrentSummary } from '@/utils/library';
 import { Loader2, AlertCircle, Lock, Check, Sparkles } from 'lucide-react';
 import { baseClient } from '@/api/baseClient';
@@ -62,16 +59,9 @@ export default function SummaryDetail() {
         author: summary.author,
         day: dayToUnlock,
         totalDays: summary.totalDays,
+        allPages: summary.allPages,
+        totalPages: summary.totalPages,
       };
-
-      if (summary.allPages && summary.allPages.length > 0) {
-        const startPage = (dayToUnlock - 1) * 10;
-        const endPage = dayToUnlock * 10;
-        const dayText = summary.allPages.slice(startPage, endPage).join('\n');
-        payload.text = dayText;
-        payload.allPages = summary.allPages;
-        payload.totalPages = summary.totalPages;
-      }
 
       const apiResult = await baseClient.post('/api/summarize', payload);
 
@@ -79,16 +69,10 @@ export default function SummaryDetail() {
         ...summary,
         unlockedDays: Math.max(summary.unlockedDays, dayToUnlock),
         currentDay: dayToUnlock,
+        lastPageProcessed: apiResult.lastPageProcessed || 0,
         days: {
           ...summary.days,
-          [dayToUnlock]: {
-            one_line_summary: apiResult.one_line_summary || '',
-            overview: apiResult.overview || '',
-            key_takeaways: apiResult.key_takeaways || [],
-            best_stories: apiResult.best_stories || [],
-            actionable_insights: apiResult.actionable_insights || [],
-            rating: apiResult.rating || 5,
-          },
+          [dayToUnlock]: apiResult.summary,
         },
       };
 
@@ -191,7 +175,7 @@ export default function SummaryDetail() {
 
       {/* Lock Screen placeholder or Day Summary content */}
       {!currentDayData ? (
-        <div className="mt-8 p-12 text-center rounded-3xl border-2 border-dashed border-border bg-card/30 backdrop-blur-sm shadow-xl flex flex-col items-center gap-6 animate-fade-in">
+        <div className="mt-8 p-6 sm:p-12 text-center rounded-3xl border-2 border-dashed border-border bg-card/30 backdrop-blur-sm shadow-xl flex flex-col items-center gap-6 animate-fade-in">
           <div className="relative p-5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500">
             <Lock className="w-10 h-10 animate-pulse" />
             <div className="absolute inset-0 rounded-2xl bg-amber-500/5 blur animate-pulse" />
@@ -224,17 +208,14 @@ export default function SummaryDetail() {
         </div>
       ) : (
         <div className="animate-fade-in">
-          <SummaryOverview summary={{
-            title: summary.title,
-            author: summary.author,
-            cover_url: summary.cover_url,
-            one_line_summary: currentDayData.one_line_summary,
-            overview: currentDayData.overview,
-          }} />
-          
-          <KeyTakeaways takeaways={currentDayData.key_takeaways} />
-          <BestStories stories={currentDayData.best_stories} />
-          <ActionableInsights insights={currentDayData.actionable_insights} />
+          <MarkdownSummary 
+            markdownContent={currentDayData} 
+            bookInfo={{
+              title: summary.title,
+              author: summary.author,
+              cover_url: summary.cover_url
+            }} 
+          />
           
           {/* Final Day Celebration */}
           {currentDayNum === summary.totalDays && (

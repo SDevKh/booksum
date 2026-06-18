@@ -21,7 +21,7 @@ export default function BookCard({ book, index }) {
     <div style={{ animationDelay: `${index * 50}ms` }}>
       <Link
         to={`/summary/${book.id}`}
-        className="group flex gap-4 p-4 rounded-xl bg-card border border-border hover:shadow-lg hover:border-primary/20 transition-all"
+        className="group flex gap-4 p-4 rounded-xl w-[93vw] sm:w-[50vw] bg-card border border-border hover:shadow-lg hover:border-primary/20 transition-all"
       >
         <div className="flex-shrink-0 w-16 h-24 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
           {book.cover_url ? (

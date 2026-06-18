@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BookSearchHero from '@/components/home/BookSearchHero';
 import LoadingState from '@/components/home/LoadingState';
-import { setCurrentSummary, saveDbSummary } from '@/utils/library';
+import { saveDbSummary } from '@/utils/library';
 import { baseClient } from '@/api/baseClient';
 import { AlertCircle } from 'lucide-react';
 
@@ -22,7 +22,9 @@ export default function Home() {
         title,
         author,
         day,
-        totalDays
+        totalDays,
+        allPages,
+        totalPages
       });
       
       // Ensure the result has a temporary unique ID for routing and saving
@@ -31,23 +33,17 @@ export default function Home() {
       
       const summaryWithId = {
         id: summaryId,
-        title: apiResult.title || title || 'Untitled Book',
-        author: apiResult.author || author || 'Unknown Author',
-        cover_url: apiResult.cover_url || '',
+        title: title || 'Untitled Book',
+        author: author || 'Unknown Author',
+        cover_url: '',
         totalPages: totalPages || 0,
         totalDays: totalDays || 1,
         unlockedDays: 1,
         currentDay: 1,
+        lastPageProcessed: apiResult.lastPageProcessed || 0,
         allPages: allPages || null,
         days: {
-          [day]: {
-            one_line_summary: apiResult.one_line_summary || '',
-            overview: apiResult.overview || '',
-            key_takeaways: apiResult.key_takeaways || [],
-            best_stories: apiResult.best_stories || [],
-            actionable_insights: apiResult.actionable_insights || [],
-            rating: apiResult.rating || 5
-          }
+          [day]: apiResult.summary
         }
       };
 

@@ -30,11 +30,11 @@ export default function BookSearchHero({ onSearch, onTextExtracted, isLoading })
     setFileError("");
     const fileType = file.type;
     const name = file.name;
-    
+
     // Guess title and author from file name
     let title = name.replace(/\.[^/.]+$/, ""); // strip extension
     let author = "Uploaded File";
-    
+
     if (title.includes(" - ")) {
       const parts = title.split(" - ");
       title = parts[0].trim();
@@ -53,7 +53,7 @@ export default function BookSearchHero({ onSearch, onTextExtracted, isLoading })
         const rawText = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = (e) => resolve(e.target.result);
-          reader.onerror = (e) => reject(new Error("Failed to read text file"));
+          reader.onerror = () => reject(new Error("Failed to read text file"));
           reader.readAsText(file);
         });
         pages = extractPagesFromTxt(rawText);
@@ -78,7 +78,7 @@ export default function BookSearchHero({ onSearch, onTextExtracted, isLoading })
     e.preventDefault();
     e.stopPropagation();
     setIsDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       await processFile(e.dataTransfer.files[0]);
     }
@@ -116,7 +116,16 @@ export default function BookSearchHero({ onSearch, onTextExtracted, isLoading })
             <Sparkles className="w-3.5 h-3.5 text-accent" />
             AI-Powered Book Summaries
           </div>
-
+          <div className="flex justify-center mb-6">
+            <a
+              href="https://digitalheroesco.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all shadow-sm"
+            >
+              Built for Digital Heroes
+            </a>
+          </div>
           <h1 className="font-heading text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-tight mb-4">
             Get the <span className="italic text-accent">wisdom</span> of any book
             <br />in minutes
@@ -134,21 +143,21 @@ export default function BookSearchHero({ onSearch, onTextExtracted, isLoading })
           transition={{ duration: 0.6, delay: 0.2 }}
           className="relative max-w-xl mx-auto animate-fade-in"
         >
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
                 value={bookInput}
                 onChange={(e) => setBookInput(e.target.value)}
                 placeholder='Try "Atomic Habits" or "Rich Dad Poor Dad"'
-                className="pl-12 h-14 text-base rounded-xl border-2 border-border focus:border-primary bg-card shadow-sm"
+                className="pl-12 h-14 text-base rounded-xl border-2 border-border focus:border-primary bg-card shadow-sm w-full"
                 disabled={isLoading}
               />
             </div>
             <Button
               type="submit"
               disabled={!bookInput.trim() || isLoading}
-              className="h-14 px-6 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base shadow-lg shadow-primary/20"
+              className="h-14 w-full sm:w-auto px-6 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base shadow-lg shadow-primary/20 shrink-0"
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
@@ -175,13 +184,11 @@ export default function BookSearchHero({ onSearch, onTextExtracted, isLoading })
             onDragLeave={handleDrag}
             onDrop={handleDrop}
             onClick={() => !isLoading && fileInputRef.current?.click()}
-            className={`relative border-2 border-dashed rounded-2xl p-8 cursor-pointer transition-all duration-300 ${
-              isLoading ? "pointer-events-none opacity-55" : ""
-            } ${
-              isDragActive
+            className={`relative border-2 border-dashed rounded-2xl p-8 cursor-pointer transition-all duration-300 ${isLoading ? "pointer-events-none opacity-55" : ""
+              } ${isDragActive
                 ? "border-accent bg-accent/5 scale-[1.02]"
                 : "border-border hover:border-primary/40 hover:bg-secondary/30"
-            }`}
+              }`}
           >
             <input
               ref={fileInputRef}
@@ -191,7 +198,7 @@ export default function BookSearchHero({ onSearch, onTextExtracted, isLoading })
               onChange={handleFileChange}
               disabled={isLoading}
             />
-            
+
             <div className="flex flex-col items-center justify-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
                 <Upload className="w-6 h-6 animate-bounce-slow" />

@@ -36,7 +36,7 @@ export default function Library() {
           </div>
         </div>
       ) : books.length ? (
-        <div className="grid gap-4">
+        <div className="grid gap-4 w-[93vw]">
           {books.map((book, index) => (
             <BookCard key={book.id} book={book} index={index} />
           ))}
