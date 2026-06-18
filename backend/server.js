@@ -7,39 +7,51 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' })); // Support larger text payloads for files
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
 const NVIDIA_MODEL = process.env.NVIDIA_MODEL || 'minimaxai/minimax-m3';
 
-if (!OPENAI_API_KEY && !NVIDIA_API_KEY) {
-  console.warn('Warning: Missing API keys in environment. Please set OPENAI_API_KEY or NVIDIA_API_KEY. The application will run in fallback mock mode.');
+if (!NVIDIA_API_KEY) {
+  console.warn('Warning: Missing API keys in environment. Please set NVIDIA_API_KEY. The application will run in fallback mock mode.');
 }
 
-const SYSTEM_PROMPT = `You are an expert book summarizer. Given a book title or a block of text, produce a comprehensive, deep, and story-driven summary.
-Return ONLY a valid JSON object matching this schema:
-{
-  "title": "Book Title",
-  "author": "Book Author",
-  "one_line_summary": "A single sentence summary that captures the essence of this book/segment",
-  "overview": "A comprehensive, long narrative summary (at least 2-3 paragraphs, 150-250 words) that details the main arguments, theories, and flow of concepts in this section.",
-  "key_takeaways": [
-    { "title": "Takeaway Title", "explanation": "A deep-dive explanation (at least 3-5 sentences) explaining the key concept, the theory behind it, and why it is important." }
-  ],
-  "best_stories": [
-    { "title": "Story Title", "story": "A detailed narration of the case study or historical story mentioned, explaining the context, characters, and what happened in an engaging way.", "lesson": "The core philosophical or practical lesson to draw from this story." }
-  ],
-  "actionable_insights": [
-    { "insight": "The insight", "how_to_apply": "Highly detailed, step-by-step instructions (at least 3 steps or a checklist) showing exactly how the reader can put this concept into practice immediately." }
-  ]
-}
+const SYSTEM_PROMPT = `You are an AI book summarizer creating daily reading summaries. You will receive the following inputs:
+- book_title: string
+- author: string
+- day: integer (e.g., 1, 2, 3…)
+- pages_text: string containing the raw text of the 10 pages assigned for this day. If the book has fewer than 10 pages left on the final day, you will receive the remaining pages.
 
-Ensure the content is extremely detailed, informative, and written in a beautiful, premium storytelling tone. Avoid generic or high-level points; explain the actual concepts, models, and science in depth. Do not wrap the JSON in markdown code blocks.`;
+Your task: Generate a daily summary that helps the reader absorb the most valuable insights, stories, quotes, and a practical action step.
+
+Output exactly the following structure using Markdown headings:
+
+# Day {day} Summary – {book_title} by {author}
+
+## Brief Description
+[A concise, 2-3 sentence overview of what this segment covers, focusing on the main theme or argument.]
+
+## Key Insights
+- **Insight 1**: [Detailed explanation, at least 3 sentences, capturing a core concept, its context, and why it matters.]
+- **Insight 2**: [Additional insight...]
+(Provide 3-5 insights, depending on the richness of the material.)
+
+## Stories & Examples
+[Narrate any anecdotes, case studies, or examples the author shares in this segment. Retell them in an engaging, story-driven way. If no stories or examples are found, write "No stories or examples in this segment."]
+
+## Quotes
+- "Quote 1" – (approximate location if known)
+- "Quote 2"
+(Include 2-3 of the most impactful, memorable quotes from the text. If none stand out, write "No quotable passages in this segment.")
+
+## Today's Task
+[One concrete, actionable exercise or reflection that the user can do today based on the reading. Make it specific, step‑by‑step, and directly applicable to daily life.]
+
+Style: Premium storytelling tone — clear, inspiring, and warm. Make every sentence feel worth reading. Keep the entire summary comprehensive yet concise (aim for 400–600 words). Do not include any text outside this Markdown structure.`;
 
 function generateFallbackSummary(title, author, text, day = 1, totalDays = 1) {
   const cleanTitle = title || "Untitled Document";
   const cleanAuthor = author || "Unknown Author";
   const lowerTitle = cleanTitle.toLowerCase();
-  
+
   if (lowerTitle.includes("atomic habit")) {
     const daysContent = {
       1: {
@@ -203,7 +215,7 @@ function generateFallbackSummary(title, author, text, day = 1, totalDays = 1) {
       ...dayData
     };
   }
-  
+
   if (lowerTitle.includes("psychology of money")) {
     const daysContent = {
       1: {
@@ -357,8 +369,8 @@ function generateFallbackSummary(title, author, text, day = 1, totalDays = 1) {
     title: cleanTitle,
     author: cleanAuthor,
     one_line_summary: `Day ${day} Summary: A narrative summary of ${cleanTitle} exploring how key concepts translate into practical wisdom.`,
-    overview: text 
-      ? `[Day ${day} of ${totalDays}] This segment covers pages ${(day-1)*10+1} to ${Math.min(day*10, (totalDays*10)) || 'N'}. Text snippet analyzed: "${text.slice(0, 200)}..."`
+    overview: text
+      ? `[Day ${day} of ${totalDays}] This segment covers pages ${(day - 1) * 10 + 1} to ${Math.min(day * 10, (totalDays * 10)) || 'N'}. Text snippet analyzed: "${text.slice(0, 200)}..."`
       : `Day ${day} of a ${totalDays}-day reading plan for ${cleanTitle} by ${cleanAuthor}. This covers key arguments, case studies, and models presented in this section.`,
     key_takeaways: [
       {
@@ -386,73 +398,121 @@ function generateFallbackSummary(title, author, text, day = 1, totalDays = 1) {
   };
 }
 
+function formatFallbackToMarkdown(fallbackJson, day, title, author) {
+  const cleanTitle = title || fallbackJson.title || "Book";
+  const cleanAuthor = author || fallbackJson.author || "Unknown Author";
+
+  let insightsMd = '';
+  if (Array.isArray(fallbackJson.key_takeaways)) {
+    insightsMd = fallbackJson.key_takeaways.map((item, idx) => `- **Insight ${idx + 1}**: **${item.title}**: ${item.explanation}`).join('\n');
+  } else {
+    insightsMd = `- **Insight 1**: A key insight from this reading segment.`;
+  }
+
+  let storiesMd = 'No stories or examples in this segment.';
+  if (Array.isArray(fallbackJson.best_stories) && fallbackJson.best_stories.length > 0) {
+    storiesMd = fallbackJson.best_stories.map(item => `### ${item.title}\n${item.story}\n\n*Lesson*: ${item.lesson}`).join('\n\n');
+  }
+
+  let quotesMd = 'No quotable passages in this segment.';
+  if (cleanTitle.toLowerCase().includes("atomic habit")) {
+    quotesMd = `- "You do not rise to the level of your goals. You fall to the level of your systems."\n- "Every action you take is a vote for the type of person you wish to become."`;
+  } else if (cleanTitle.toLowerCase().includes("psychology of money")) {
+    quotesMd = `- "Doing well with money isn't about what you know. It's about how you behave."\n- "Wealth is what you don't see."`;
+  }
+
+  let taskMd = 'No concrete exercise assigned for today.';
+  if (Array.isArray(fallbackJson.actionable_insights) && fallbackJson.actionable_insights.length > 0) {
+    taskMd = fallbackJson.actionable_insights.map(item => `**${item.insight}**\n${item.how_to_apply}`).join('\n\n');
+  }
+
+  return `# Day ${day} Summary – ${cleanTitle} by ${cleanAuthor}
+
+## Brief Description
+${fallbackJson.one_line_summary || 'A concise overview of this segment.'}
+${fallbackJson.overview || ''}
+
+## Key Insights
+${insightsMd}
+
+## Stories & Examples
+${storiesMd}
+
+## Quotes
+${quotesMd}
+
+## Today's Task
+${taskMd}`;
+}
+
 app.get('/api/summarize', (req, res) => {
-  res.json({ message: 'Please POST JSON { "text": "..." } or { "title": "..." } to this endpoint for summarization.' });
+  res.json({ message: 'Please POST JSON { "allPages": [...], "day": 1 } to this endpoint for summarization.' });
 });
 
 app.post('/api/summarize', async (req, res) => {
-  const { text, title, author, day, totalDays } = req.body;
-  if (!text && !title) {
-    return res.status(400).json({ error: 'Missing text or title' });
+  const { text, title, author, day, totalDays, allPages, totalPages } = req.body;
+  if (!text && !title && !allPages) {
+    return res.status(400).json({ error: 'Missing text, title, or allPages' });
   }
 
   const currentDay = day || 1;
   const numDays = totalDays || 1;
 
-  const hasNvidiaKey = NVIDIA_API_KEY && NVIDIA_API_KEY !== 'YOUR_NVIDIA_API_KEY' && NVIDIA_API_KEY !== '';
-  const hasOpenaiKey = OPENAI_API_KEY && OPENAI_API_KEY !== 'YOUR_OPENAI_API_KEY' && OPENAI_API_KEY !== '';
+  // Track the last page processed for this book
+  let pageText = text || '';
+  let lastPageProcessed = 0;
+  if (Array.isArray(allPages) && allPages.length > 0) {
+    const startPage = (currentDay - 1) * 10;
+    const endPage = currentDay * 10;
+    pageText = allPages.slice(startPage, endPage).join('\n');
+    lastPageProcessed = Math.min(endPage, totalPages || allPages.length);
+  } else if (totalPages) {
+    lastPageProcessed = Math.min(currentDay * 10, totalPages);
+  } else {
+    lastPageProcessed = currentDay * 10;
+  }
 
-  if (!hasNvidiaKey && !hasOpenaiKey) {
+  const hasNvidiaKey = NVIDIA_API_KEY && NVIDIA_API_KEY !== 'YOUR_NVIDIA_API_KEY' && NVIDIA_API_KEY !== '';
+
+  if (!hasNvidiaKey) {
     console.log(`Using fallback summary generator for: "${title || 'Uploaded Document'}" (Day ${currentDay}/${numDays})`);
-    const fallbackResult = generateFallbackSummary(title, author, text, currentDay, numDays);
-    return res.json(fallbackResult);
+    const fallbackJSON = generateFallbackSummary(title, author, pageText, currentDay, numDays);
+    const fallbackMD = formatFallbackToMarkdown(fallbackJSON, currentDay, title, author);
+    return res.json({ summary: fallbackMD, lastPageProcessed });
   }
 
   let userPrompt = '';
-  if (text) {
+  if (pageText) {
     userPrompt = `You are summarizing Day ${currentDay} of a ${numDays}-day reading plan for the document "${title || 'Uploaded Document'}"${author ? ` by ${author}` : ''}.
 Please summarize the following text which covers this daily segment:
 
-${text}`;
+${pageText}`;
   } else {
     userPrompt = `Please summarize Day ${currentDay} of a ${numDays}-day reading plan for the book "${title}"${author ? ` by ${author}` : ''}.
 Focus specifically on the content that corresponds to Day ${currentDay} of the plan (which covers roughly section/part ${currentDay} of ${numDays} parts of the book).`;
   }
 
-  let invokeUrl = '';
-  let authHeader = '';
-  let bodyPayload = {};
-
-  if (hasNvidiaKey) {
-    invokeUrl = 'https://integrate.api.nvidia.com/v1/chat/completions';
-    authHeader = `Bearer ${NVIDIA_API_KEY}`;
-    bodyPayload = {
-      model: NVIDIA_MODEL,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: userPrompt },
-      ],
-      max_tokens: 8192,
-      temperature: 0.7,
-      top_p: 0.95,
-      stream: false
-    };
-    console.log(`Calling NVIDIA NIM API with model: ${NVIDIA_MODEL} (Day ${currentDay}/${numDays})`);
-  } else {
-    invokeUrl = 'https://api.openai.com/v1/chat/completions';
-    authHeader = `Bearer ${OPENAI_API_KEY}`;
-    bodyPayload = {
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.7,
-      response_format: { type: "json_object" },
-      stream: false
-    };
-    console.log(`Calling OpenAI API with model: gpt-4o-mini (Day ${currentDay}/${numDays})`);
+  // If this is the final day (or remaining pages are fewer than 10), add a special completed note
+  const isFinalDay = currentDay === numDays || (Array.isArray(allPages) && (currentDay * 10) >= allPages.length);
+  if (isFinalDay) {
+    userPrompt += `\n\nNote: This is the final day of the reading plan. Please include a 'book completed' closing summary or celebratory note at the very end of your markdown summary.`;
   }
+
+  const invokeUrl = 'https://integrate.api.nvidia.com/v1/chat/completions';
+  const authHeader = `Bearer ${NVIDIA_API_KEY}`;
+  const bodyPayload = {
+    model: NVIDIA_MODEL,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: userPrompt },
+    ],
+    max_tokens: 8192,
+    temperature: 0.7,
+    top_p: 0.95,
+    stream: false
+  };
+  console.log(`Calling NVIDIA NIM API with model: ${NVIDIA_MODEL} (Day ${currentDay}/${numDays})`);
+
   const apiTimeout = parseInt(process.env.API_TIMEOUT, 10) || 120000;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
@@ -478,28 +538,18 @@ Focus specifically on the content that corresponds to Day ${currentDay} of the p
       throw new Error(data.error.message || JSON.stringify(data.error));
     }
 
-    const assistantMessage = data.choices?.[0]?.message?.content;
-    let result;
-    try {
-      let resultText = assistantMessage || '';
-      // Strip markdown code block wrappers if model includes them
-      if (resultText.includes('```')) {
-        resultText = resultText.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-      }
-      result = JSON.parse(resultText.trim());
-    } catch (e) {
-      console.error('Failed to parse API JSON output:', assistantMessage);
-      console.log('Falling back to local summary generator.');
-      const fallbackResult = generateFallbackSummary(title, author, text, currentDay, numDays);
-      return res.json(fallbackResult);
-    }
-    res.json(result);
+    const assistantMessage = data.choices?.[0]?.message?.content || '';
+    res.json({
+      summary: assistantMessage.trim(),
+      lastPageProcessed
+    });
   } catch (err) {
     clearTimeout(timeoutId);
     console.error('API call failed:', err.message);
     console.log('Falling back to local summary generator.');
-    const fallbackResult = generateFallbackSummary(title, author, text, currentDay, numDays);
-    res.json(fallbackResult);
+    const fallbackJSON = generateFallbackSummary(title, author, pageText, currentDay, numDays);
+    const fallbackMD = formatFallbackToMarkdown(fallbackJSON, currentDay, title, author);
+    res.json({ summary: fallbackMD, lastPageProcessed });
   }
 });
 
@@ -509,7 +559,7 @@ app.post('/api/auth/signup', (req, res) => {
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password are required' });
   }
-  
+
   try {
     const newUser = db.createUser(username, password);
     res.status(201).json({
@@ -529,12 +579,12 @@ app.post('/api/auth/login', (req, res) => {
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password are required' });
   }
-  
+
   const user = db.findUserByUsername(username);
   if (!user || user.password !== password) {
     return res.status(401).json({ error: 'Invalid username or password' });
   }
-  
+
   res.json({
     success: true,
     user: {
@@ -550,7 +600,7 @@ app.get('/api/summaries', (req, res) => {
   if (!userId) {
     return res.status(400).json({ error: 'Missing userId parameter' });
   }
-  
+
   const summaries = db.getUserSummaries(userId);
   res.json(summaries);
 });
@@ -558,7 +608,7 @@ app.get('/api/summaries', (req, res) => {
 app.get('/api/summaries/:id', (req, res) => {
   const { id } = req.params;
   const summary = db.getSummaryById(id);
-  
+
   if (!summary) {
     return res.status(404).json({ error: 'Summary not found' });
   }
@@ -570,7 +620,7 @@ app.post('/api/summaries', (req, res) => {
   if (!userId || !summary) {
     return res.status(400).json({ error: 'Missing userId or summary payload' });
   }
-  
+
   try {
     const saved = db.saveUserSummary(userId, summary);
     res.json({ success: true, summary: saved });
@@ -582,11 +632,11 @@ app.post('/api/summaries', (req, res) => {
 app.delete('/api/summaries/:id', (req, res) => {
   const { id } = req.params;
   const { userId } = req.query;
-  
+
   if (!userId) {
     return res.status(400).json({ error: 'Missing userId parameter' });
   }
-  
+
   const deleted = db.deleteUserSummary(userId, id);
   if (deleted) {
     res.json({ success: true });
